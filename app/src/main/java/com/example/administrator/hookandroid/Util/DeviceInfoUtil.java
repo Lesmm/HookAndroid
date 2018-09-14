@@ -4,32 +4,33 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.DhcpInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.UserHandle;
 import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.webkit.WebView;
 
+import com.example.administrator.hookandroid.Activity.MainActivity;
+import com.example.administrator.hookandroid.network.HTTPSender;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
@@ -39,8 +40,70 @@ import java.util.regex.Pattern;
 public class DeviceInfoUtil {
 
     private static final String TAG = "DeviceInfoUtil";
+    private static Handler bgHandler = null;
+    private static Handler mainHandler = null;
 
-    public static JSONObject getDeviceInfo(Context context) {
+    static {
+        mainHandler = new Handler();
+    }
+
+    public static Handler getMainHandler() {
+        return mainHandler;
+    }
+
+    public static Handler getBGHandler() {
+        if (bgHandler == null) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "start loop");
+                    Looper.prepare();
+                    bgHandler = new Handler(Looper.myLooper());
+                    synchronized (DeviceInfoUtil.class) {
+                        try {
+                            DeviceInfoUtil.class.notify();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    Looper.loop();
+                    Log.d(TAG, "end loop");
+                }
+            }).start();
+
+            synchronized (DeviceInfoUtil.class) {
+                try {
+                    DeviceInfoUtil.class.wait();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return bgHandler;
+    }
+
+    public static void uploadDeviceInfo(final Context context) {
+        getBGHandler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Log.d(TAG, "start post device info");
+                    JSONObject result = DeviceInfoUtil.getDeviceInfo(context);
+                    String resultJson = result.toString();
+                    Log.d(TAG, JSONStringUtil.jsonFormart(resultJson));
+                    JSONObject res = HTTPSender.post(APPSettings.uploadPhoneInfoAPI, resultJson);
+
+                    Log.d(TAG, "<<<<< -- >>>>>" + res.toString());
+                } catch (Exception e) {
+                    Log.d(TAG, "------------->>> Exception <<<-------------");
+                    Log.d(TAG, e.toString());
+                    e.printStackTrace();
+                }
+            }
+        }, 5 * 1000);
+    }
+
+    public static JSONObject getDeviceInfo(final Context context) {
         // compile/build info
         JSONObject result = new JSONObject();
 
@@ -130,8 +193,8 @@ public class DeviceInfoUtil {
 
         // wifi info
         JSONObject wifiJsonInfo = new JSONObject();
-        WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         try {
+            WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             WifiInfo wifiInfo = wifiManager.getConnectionInfo();
             JSONObject wifiConInfoJson = JavaReflectUtil.invokeGetMethodsWithObject(wifiInfo);
             JSONObject connectionInfo = JSONObjectUtil.transformJSONObjectKeys(wifiConInfoJson, new JSONObjectUtil.KeyTransformer() {
@@ -161,6 +224,34 @@ public class DeviceInfoUtil {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        // network interfaces
+        try {
+            Object obj = new Object();
+            Class clzzz = Object.class;
+            Class czzzzz = obj.getClass();
+
+            NetworkInterface defInterface = (NetworkInterface)JavaReflectUtil.invokeMethodWithObject(NetworkInterface.class, "getDefault");
+            NetworkInterface amDefInterface = (NetworkInterface)JavaReflectUtil.callMethodWithObject(NetworkInterface.class, "getDefault", new Class[]{}, new Object[]{});
+
+            Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
+            while (netInterfaces.hasMoreElements()) {
+                NetworkInterface anInterface = netInterfaces.nextElement();
+                Log.d(TAG, "NetworkInterface: " + anInterface.toString() + ", DisplayName: " + anInterface.getDisplayName() + ", Name: " + anInterface.getName());
+                Enumeration<InetAddress> ips = anInterface.getInetAddresses();
+                while (ips.hasMoreElements()) {
+                    InetAddress inetAddress = ips.nextElement();
+                    Log.d(TAG, "InetAddress: " + inetAddress.toString());
+                    boolean isSiteLocalAddress = inetAddress.isSiteLocalAddress();
+                    boolean isLoopbackAddress = inetAddress.isLoopbackAddress();
+                    String hostAddress = inetAddress.getHostAddress();
+                    Log.d(TAG, hostAddress + " " + isSiteLocalAddress + " " + isLoopbackAddress);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
 
 
         // Settings
@@ -194,12 +285,33 @@ public class DeviceInfoUtil {
         }
 
         // Webkit USER AGENT
-        JSONObject userAgentInfo = new JSONObject();
-        String userAgent = new WebView(context).getSettings().getUserAgentString();
-        try {
-            userAgentInfo.put("WebKit.UserAgent", userAgent);
-        } catch (Exception e) {
-            e.printStackTrace();
+        final JSONObject userAgentInfo = new JSONObject();
+        getMainHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                String userAgent = new WebView(context).getSettings().getUserAgentString();
+                try {
+                    userAgentInfo.put("WebKit.UserAgent", userAgent);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                synchronized (DeviceInfoUtil.class) {
+                    try {
+                        DeviceInfoUtil.class.notify();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        synchronized (DeviceInfoUtil.class) {
+            try {
+                DeviceInfoUtil.class.wait();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         // merges
@@ -422,6 +534,7 @@ public class DeviceInfoUtil {
         }
 
         // new a ScanResult for test
+        /*
         try {
             Class wifiSsidClz = Class.forName("android.net.wifi.WifiSsid");
             Constructor constructor = ScanResult.class.getConstructor(new Class[]{wifiSsidClz, String.class, String.class, int.class, int.class, long.class});
@@ -432,6 +545,7 @@ public class DeviceInfoUtil {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        */
 
         return array;
     }

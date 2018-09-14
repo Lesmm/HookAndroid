@@ -49,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static int flag = 0;
 
-    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -61,7 +60,21 @@ public class MainActivity extends AppCompatActivity {
 
         final TextView mTextView = findViewById(R.id.textView1);
         mTextView.setMovementMethod(ScrollingMovementMethod.getInstance());
-        mTextView.setText(showDeviceInfo(this));
+
+        DeviceInfoUtil.getBGHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                final String contents = showDeviceInfo(MainActivity.this);
+
+                DeviceInfoUtil.getMainHandler().post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTextView.setText(contents);
+                    }
+                });
+            }
+        });
+
         mTextView.post(new Runnable() {
             @Override
             public void run() {
@@ -85,12 +98,31 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 try {
-                    JSONObject result = DeviceInfoUtil.getDeviceInfo(MainActivity.this);
-                    String resultJson = result.toString();
-                    Log.d(TAG, JSONStringUtil.jsonFormart(resultJson));
-                    JSONObject res = HTTPSender.post(APPSettings.uploadPhoneInfoAPI, resultJson);
-//                SQLServerUtil.insertUpdatePhoneInfo(Build.MODEL, resultJson);
-                    Toast.makeText(MainActivity.this, "上传/更新设备信息完成: " + res.toString(), Toast.LENGTH_LONG).show();
+                    DeviceInfoUtil.getBGHandler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Log.d(TAG, "start post device info");
+                                JSONObject result = DeviceInfoUtil.getDeviceInfo(MainActivity.this);
+                                String resultJson = result.toString();
+                                Log.d(TAG, JSONStringUtil.jsonFormart(resultJson));
+                                final JSONObject res = HTTPSender.post(APPSettings.uploadPhoneInfoAPI, resultJson);
+
+                                DeviceInfoUtil.getMainHandler().post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(MainActivity.this, "上传/更新设备信息完成: " + res.toString(), Toast.LENGTH_LONG).show();
+                                    }
+                                });
+
+                                Log.d(TAG, "<<<<< -- >>>>>" + res.toString());
+                            } catch (Exception e) {
+                                Log.d(TAG, "------------->>> Exception <<<-------------");
+                                Log.d(TAG, e.toString());
+                                e.printStackTrace();
+                            }
+                        }
+                    }, 5 * 1000);
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -100,8 +132,6 @@ public class MainActivity extends AppCompatActivity {
 
         final EditText editText = findViewById(R.id.editText);
         editText.clearFocus();
-
-
 
         try {
             Log.d(TAG, "HOOK IMEI is: " + getIMEI(this));
@@ -115,9 +145,6 @@ public class MainActivity extends AppCompatActivity {
 
             location2.setLatitude(36.09872724920132);
             location2.setLongitude(120.37187494546644);
-
-//            location2.setLatitude(36.10521490);
-//            location2.setLongitude(120.38442818);
 
             float distance = location1.distanceTo(location2);
             double mapDistance = MapDistance.getShortDistance(location1.getLongitude(), location1.getLatitude(), location2.getLongitude(), location2.getLatitude());
@@ -176,6 +203,13 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_main);
+//        Log.d("Hello Hook Test", "<<<<<<<------------------------>>>>>>>>>");
+//        DeviceInfoUtil.uploadDeviceInfo(this);
+//    }
 
     public static String showDeviceInfo(Context context) {
         StringBuffer sb = new StringBuffer();

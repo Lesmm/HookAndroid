@@ -51,9 +51,9 @@ public class JavaReflectUtil {
 
                 String name = fd.getName();
                 Object value = null;
-                if(Modifier.isStatic(fd.getModifiers())) {
+                if (Modifier.isStatic(fd.getModifiers())) {
                     value = fd.get(cls);
-                } else if (obj != null){
+                } else if (obj != null) {
                     value = fd.get(obj);
                 }
                 if (value == null) {
@@ -102,6 +102,64 @@ public class JavaReflectUtil {
         }
 
         return result;
+    }
+
+    public static Object invokeMethodWithObject(Object obj, String methodName) {
+        try {
+            boolean isClass = obj instanceof Class;
+            Method[] methods = isClass ? ((Class) obj).getDeclaredMethods() : obj.getClass().getDeclaredMethods();
+            for (int i = 0; i < methods.length; i++) {
+                Method mt = methods[i];
+                mt.setAccessible(true);
+                String name = mt.getName();
+                if (name.equals(methodName)) {
+                    return mt.invoke(obj, new Object[]{});
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static Object callMethodWithObject(Object obj, String methodName, Class<?>[] parameterTypes, Object... args) {
+        try {
+            boolean isClass = obj instanceof Class;
+            Method mt = isClass ? ((Class) obj).getDeclaredMethod(methodName, parameterTypes) : obj.getClass().getDeclaredMethod(methodName, parameterTypes);
+            mt.setAccessible(true);
+            return mt.invoke(obj, args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static Object invokeClassMethod(String className, String methodName, Class<?>[] argsTypes, Object[] args) {
+        ClassLoader classLoader = String.class.getClassLoader();
+        return invokeClassMethod(className, classLoader, methodName, argsTypes, args);
+    }
+
+    public static Object invokeClassMethod(String className, ClassLoader classLoader, String methodName, Class<?>[] argsTypes, Object[] args) {
+        try {
+            Class<?> clazz = classLoader.loadClass(className);
+            return invokeMethod(clazz, methodName, argsTypes, args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static Object invokeMethod(Object obj, String methodName, Class<?>[] argsTypes, Object[] args) {
+        try {
+            boolean isClass = obj instanceof Class;
+            Class<?> clazz = isClass ? (Class<?>) obj : obj.getClass();
+            Method method = clazz.getDeclaredMethod(methodName, argsTypes);
+            method.setAccessible(true);
+            return method.invoke(obj, args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }
