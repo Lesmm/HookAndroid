@@ -107,21 +107,21 @@ public class DeviceInfoUtil {
         // compile/build info
         JSONObject result = new JSONObject();
 
-        JSONObject buildJson = new JSONObject(JavaReflectUtil.fieldNameValues(Build.class));
+        JSONObject buildJson = new JSONObject(JavaReflectUtil.objectFieldNameValues(Build.class));
         JSONObject buildJsonInfo = JSONObjectUtil.transformJSONObjectKeys(buildJson, new JSONObjectUtil.KeyTransformer() {
             @Override
             public String transformAction(String key, Object value) {
                 return "Build." + key;
             }
         });
-        JSONObject buildVersionJson = new JSONObject(JavaReflectUtil.fieldNameValues(Build.VERSION.class));
+        JSONObject buildVersionJson = new JSONObject(JavaReflectUtil.objectFieldNameValues(Build.VERSION.class));
         JSONObject buildVersionJsonInfo = JSONObjectUtil.transformJSONObjectKeys(buildVersionJson, new JSONObjectUtil.KeyTransformer() {
             @Override
             public String transformAction(String key, Object value) {
                 return "Build.VERSION." + key;
             }
         });
-        JSONObject buildVersionCodesJson = new JSONObject(JavaReflectUtil.fieldNameValues(Build.VERSION_CODES.class));
+        JSONObject buildVersionCodesJson = new JSONObject(JavaReflectUtil.objectFieldNameValues(Build.VERSION_CODES.class));
         JSONObject buildVersionCodesJsonInfo = JSONObjectUtil.transformJSONObjectKeys(buildVersionCodesJson, new JSONObjectUtil.KeyTransformer() {
             @Override
             public String transformAction(String key, Object value) {
@@ -157,7 +157,7 @@ public class DeviceInfoUtil {
         // display info
         DisplayMetrics displayMetrics = new DisplayMetrics();
         ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        JSONObject displayMetricsJson = new JSONObject(JavaReflectUtil.fieldNameValues(displayMetrics, new JavaReflectUtil.FieldFilter() {
+        JSONObject displayMetricsJson = new JSONObject(JavaReflectUtil.objectFieldNameValues(displayMetrics, new JavaReflectUtil.FieldFilter() {
             @Override
             public boolean filterAction(Field field) {
                 Class fieldType = field.getType();
@@ -339,7 +339,7 @@ public class DeviceInfoUtil {
             final Method getStringForUserMethod = settingCls.getDeclaredMethod("getStringForUser", new Class[]{ContentResolver.class, String.class, int.class});
             getStringForUserMethod.setAccessible(true);
 
-            JSONObject fieldNamesValues = new JSONObject(JavaReflectUtil.fieldNameValues(settingCls));
+            JSONObject fieldNamesValues = new JSONObject(JavaReflectUtil.objectFieldNameValues(settingCls));
             JSONObjectUtil.iterateJSONObject(fieldNamesValues, new JSONObjectUtil.IterateHandler() {
                 @Override
                 public void iterateAction(String key, Object value) {
@@ -446,7 +446,7 @@ public class DeviceInfoUtil {
     public static JSONObject getTelephonySystemProperties() {
         JSONObject result = new JSONObject();
         try {
-            JSONObject jsonObject = new JSONObject(JavaReflectUtil.fieldNameValues(Class.forName("com.android.internal.telephony.TelephonyProperties")));
+            JSONObject jsonObject = new JSONObject(JavaReflectUtil.objectFieldNameValues(Class.forName("com.android.internal.telephony.TelephonyProperties")));
             java.util.Iterator iterator = jsonObject.keys();
             while (iterator.hasNext()) {
                 String fieldName = (String) iterator.next();

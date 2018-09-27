@@ -17,11 +17,11 @@ public class JavaReflectUtil {
         boolean filterAction(Field field);
     }
 
-    public static Map fieldNameValues(Object obj) {
-        return fieldNameValues(obj, null);
+    public static Map objectFieldNameValues(Object obj) {
+        return objectFieldNameValues(obj, null);
     }
 
-    public static Map fieldNameValues(Object obj, FieldFilter filter) {
+    public static Map objectFieldNameValues(Object obj, FieldFilter filter) {
         Map<String, Object> result = new HashMap<String, Object>();
 
         Boolean isClass = obj instanceof Class;
