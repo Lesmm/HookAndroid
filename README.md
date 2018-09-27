@@ -1,5 +1,5 @@
 
-adb logcat | grep -E "HOOK|Hook|hook|clsMyRom|cldevrom|main|HLog"
+$ adb logcat | grep -E "HOOK|Hook|hook|clsMyRom|cldevrom|main|Main|HLog|System.err|Process"
 adb pull /system/build.prop ./
 (same as out/target/product/cancro/system/build.prop)
 

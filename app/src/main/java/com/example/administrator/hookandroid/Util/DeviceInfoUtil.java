@@ -18,7 +18,6 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.webkit.WebView;
 
-import com.example.administrator.hookandroid.Activity.MainActivity;
 import com.example.administrator.hookandroid.network.HTTPSender;
 
 import org.json.JSONArray;
@@ -33,6 +32,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -107,21 +107,21 @@ public class DeviceInfoUtil {
         // compile/build info
         JSONObject result = new JSONObject();
 
-        JSONObject buildJson = JavaReflectUtil.getObjectFieldNameValues(Build.class);
+        JSONObject buildJson = new JSONObject(JavaReflectUtil.fieldNameValues(Build.class));
         JSONObject buildJsonInfo = JSONObjectUtil.transformJSONObjectKeys(buildJson, new JSONObjectUtil.KeyTransformer() {
             @Override
             public String transformAction(String key, Object value) {
                 return "Build." + key;
             }
         });
-        JSONObject buildVersionJson = JavaReflectUtil.getObjectFieldNameValues(Build.VERSION.class);
+        JSONObject buildVersionJson = new JSONObject(JavaReflectUtil.fieldNameValues(Build.VERSION.class));
         JSONObject buildVersionJsonInfo = JSONObjectUtil.transformJSONObjectKeys(buildVersionJson, new JSONObjectUtil.KeyTransformer() {
             @Override
             public String transformAction(String key, Object value) {
                 return "Build.VERSION." + key;
             }
         });
-        JSONObject buildVersionCodesJson = JavaReflectUtil.getObjectFieldNameValues(Build.VERSION_CODES.class);
+        JSONObject buildVersionCodesJson = new JSONObject(JavaReflectUtil.fieldNameValues(Build.VERSION_CODES.class));
         JSONObject buildVersionCodesJsonInfo = JSONObjectUtil.transformJSONObjectKeys(buildVersionCodesJson, new JSONObjectUtil.KeyTransformer() {
             @Override
             public String transformAction(String key, Object value) {
@@ -157,7 +157,7 @@ public class DeviceInfoUtil {
         // display info
         DisplayMetrics displayMetrics = new DisplayMetrics();
         ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        JSONObject displayMetricsJson = JavaReflectUtil.getObjectFieldNameValues(displayMetrics, new JavaReflectUtil.FieldFilter() {
+        JSONObject displayMetricsJson = new JSONObject(JavaReflectUtil.fieldNameValues(displayMetrics, new JavaReflectUtil.FieldFilter() {
             @Override
             public boolean filterAction(Field field) {
                 Class fieldType = field.getType();
@@ -171,7 +171,7 @@ public class DeviceInfoUtil {
                 }
                 return false;
             }
-        });
+        }));
         final String __ScreenPrefix__ = "Screen.";
         JSONObject displayInfo = JSONObjectUtil.transformJSONObjectKeys(displayMetricsJson, new JSONObjectUtil.KeyTransformer() {
             @Override
@@ -196,7 +196,8 @@ public class DeviceInfoUtil {
         try {
             WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-            JSONObject wifiConInfoJson = JavaReflectUtil.invokeGetMethodsWithObject(wifiInfo);
+            Map wifiConInfoJsonMap = JavaReflectUtil.invokeObjectGetMethods(wifiInfo);
+            JSONObject wifiConInfoJson = new JSONObject(wifiConInfoJsonMap);
             JSONObject connectionInfo = JSONObjectUtil.transformJSONObjectKeys(wifiConInfoJson, new JSONObjectUtil.KeyTransformer() {
                 @Override
                 public String transformAction(String key, Object value) {
@@ -227,12 +228,8 @@ public class DeviceInfoUtil {
 
         // network interfaces
         try {
-            Object obj = new Object();
-            Class clzzz = Object.class;
-            Class czzzzz = obj.getClass();
-
-            NetworkInterface defInterface = (NetworkInterface)JavaReflectUtil.invokeMethodWithObject(NetworkInterface.class, "getDefault");
-            NetworkInterface amDefInterface = (NetworkInterface)JavaReflectUtil.callMethodWithObject(NetworkInterface.class, "getDefault", new Class[]{}, new Object[]{});
+            NetworkInterface aInterface = (NetworkInterface)JavaReflectUtil.invokeMethod(NetworkInterface.class, "getByName", new Class[]{String.class}, new Object[]{"wlan0"});
+            String invokeResult = (String)JavaReflectUtil.invokeMethod(aInterface, "getName", new Class[]{}, new Object[]{});
 
             Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
             while (netInterfaces.hasMoreElements()) {
@@ -295,7 +292,6 @@ public class DeviceInfoUtil {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
                 synchronized (DeviceInfoUtil.class) {
                     try {
                         DeviceInfoUtil.class.notify();
@@ -305,7 +301,6 @@ public class DeviceInfoUtil {
                 }
             }
         });
-
         synchronized (DeviceInfoUtil.class) {
             try {
                 DeviceInfoUtil.class.wait();
@@ -344,7 +339,7 @@ public class DeviceInfoUtil {
             final Method getStringForUserMethod = settingCls.getDeclaredMethod("getStringForUser", new Class[]{ContentResolver.class, String.class, int.class});
             getStringForUserMethod.setAccessible(true);
 
-            JSONObject fieldNamesValues = JavaReflectUtil.getObjectFieldNameValues(settingCls);
+            JSONObject fieldNamesValues = new JSONObject(JavaReflectUtil.fieldNameValues(settingCls));
             JSONObjectUtil.iterateJSONObject(fieldNamesValues, new JSONObjectUtil.IterateHandler() {
                 @Override
                 public void iterateAction(String key, Object value) {
@@ -451,7 +446,7 @@ public class DeviceInfoUtil {
     public static JSONObject getTelephonySystemProperties() {
         JSONObject result = new JSONObject();
         try {
-            JSONObject jsonObject = JavaReflectUtil.getObjectFieldNameValues(Class.forName("com.android.internal.telephony.TelephonyProperties"));
+            JSONObject jsonObject = new JSONObject(JavaReflectUtil.fieldNameValues(Class.forName("com.android.internal.telephony.TelephonyProperties")));
             java.util.Iterator iterator = jsonObject.keys();
             while (iterator.hasNext()) {
                 String fieldName = (String) iterator.next();

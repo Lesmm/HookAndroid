@@ -47,8 +47,6 @@ public class HTTPSender {
             do {
 
                 URL urlObj = new URL(url);
-//                jsonString = jsonString.replace("\n", "");
-//                jsonString = jsonString.replace("\r\n", "");
                 byte[] postDataBytes = jsonString.getBytes("UTF-8");
                 long postDataLength = postDataBytes.length;
 
@@ -73,7 +71,7 @@ public class HTTPSender {
                 }
                 if (jsonObject == null) {
                     jsonObject = new JSONObject();
-                    jsonObject.put("Response String", responseContent);
+                    jsonObject.put("STRING_CONTENTS", responseContent);
                 }
                 result = jsonObject;
 
@@ -121,6 +119,50 @@ public class HTTPSender {
         }).start();
     }
 
+    public static JSONObject get(String urlStr) {
+        JSONObject result = null;
+
+        try {
+            URL url = new URL(urlStr);
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+
+            conn.setConnectTimeout(10 * 1000);
+            conn.setReadTimeout(10 * 1000);
+            conn.connect();
+
+            // convert response to json
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            String str = null;
+            while ((str = in.readLine()) != null) {
+                sb.append(str);
+            }
+            String responseContent = sb.toString();
+
+            JSONObject jsonObject = null;
+            if ((responseContent.startsWith("{") && responseContent.endsWith("}"))
+                    || (responseContent.startsWith("[") && responseContent.endsWith("]"))) {
+                jsonObject = new JSONObject(responseContent);
+            }
+            if (jsonObject == null) {
+                jsonObject = new JSONObject();
+                jsonObject.put("STRING_CONTENTS", responseContent);
+            }
+            result = jsonObject;
+
+            int statusCode = conn.getResponseCode();
+            if (statusCode == 200) {
+                return result;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
 
     public static String startRequest(Boolean isUseProxy, String proxy_ip, int proxy_port, String urlStr, int timeout, String referer, String user_agent, String cookie) throws Exception {
 
@@ -160,7 +202,6 @@ public class HTTPSender {
 		*/
 
         String set_cookie = httpsConn.getHeaderField("Set-Cookie");
-
         return set_cookie;
     }
 

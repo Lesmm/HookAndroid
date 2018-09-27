@@ -13,7 +13,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.StrictMode;
-import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.text.method.ScrollingMovementMethod;
 import android.util.DisplayMetrics;
@@ -31,6 +30,7 @@ import com.example.administrator.hookandroid.Util.DeviceInfoUtil;
 import com.example.administrator.hookandroid.Util.FileUtil;
 import com.example.administrator.hookandroid.Util.JSONObjectUtil;
 import com.example.administrator.hookandroid.Util.JSONStringUtil;
+import com.example.administrator.hookandroid.Util.JavaReflectUtil;
 import com.example.administrator.hookandroid.Util.MapDistance;
 import com.example.administrator.hookandroid.Util.SystemPropertiesUtil;
 import com.example.administrator.hookandroid.network.HTTPSender;
@@ -43,8 +43,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     private static final String TAG = "MainActivity";
     private static int flag = 0;
@@ -58,7 +59,8 @@ public class MainActivity extends AppCompatActivity {
             StrictMode.setThreadPolicy(policy);
         }
 
-        final TextView mTextView = findViewById(R.id.textView1);
+        // infos
+        final TextView mTextView = (TextView) findViewById(R.id.textView1);
         mTextView.setMovementMethod(ScrollingMovementMethod.getInstance());
 
         DeviceInfoUtil.getBGHandler().post(new Runnable() {
@@ -83,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Button btn = findViewById(R.id.button2);
+        Button btn = (Button) findViewById(R.id.button2);
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -93,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Button button = findViewById(R.id.button);
+        Button button = (Button) findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -130,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        final EditText editText = findViewById(R.id.editText);
+        final EditText editText = (EditText) findViewById(R.id.editText);
         editText.clearFocus();
 
         try {
@@ -151,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
             double diff = MapDistance.getDistance(location1.getLongitude(), location1.getLatitude(), location2.getLongitude(), location2.getLatitude());
 
             final LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5 * 1000, 1, new LocationListener() {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5 * 1000, 1, new LocationListener() {
                 @Override
                 public void onLocationChanged(Location location) {
                     double lat = location.getLatitude();
@@ -171,22 +173,35 @@ public class MainActivity extends AppCompatActivity {
                     editText.setText("lat:" + lat + " lng:" + lng);
                     printLocationInformation(MainActivity.this, lat, lng);
                 }
+
                 @Override
-                public void onStatusChanged(String provider, int status, Bundle extras) { }
+                public void onStatusChanged(String provider, int status, Bundle extras) {
+                }
+
                 @Override
-                public void onProviderEnabled(String provider) { }
+                public void onProviderEnabled(String provider) {
+                }
+
                 @Override
-                public void onProviderDisabled(String provider) { }
+                public void onProviderDisabled(String provider) {
+                }
             });
 
-            Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // LocationManager.NETWORK_PROVIDER
-            if (location != null) {
-                double lat = location.getLatitude();
-                double lng = location.getLongitude();
-                Log.d(TAG, "----->>>>> getLastKnownLocation lat:" + lat + " lng:" + lng);
-            }
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER); // LocationManager.NETWORK_PROVIDER
+                    if (location != null) {
+                        double lat = location.getLatitude();
+                        double lng = location.getLongitude();
 
-            locationManager.addGpsStatusListener(new GpsStatus.Listener(){
+                        Map map = JavaReflectUtil.invokeObjectGetMethods(location);
+                        Log.d(TAG, "----->>>>> getLastKnownLocation lat:" + lat + " lng:" + lng);
+                    }
+                }
+            }, 3 * 1000);
+
+            locationManager.addGpsStatusListener(new GpsStatus.Listener() {
                 @Override
                 public void onGpsStatusChanged(int event) {
                     Log.d(TAG, "----->>>>> onGpsStatusChanged event:" + event);
@@ -284,8 +299,8 @@ public class MainActivity extends AppCompatActivity {
         sb.append("--------------- Build VERSION ---------------" + "\n");
         sb.append("INCREMENTAL: " + Build.VERSION.INCREMENTAL + "\n");
         sb.append("RELEASE: " + Build.VERSION.RELEASE + "\n");
-        sb.append("BASE_OS: " + Build.VERSION.BASE_OS + "\n");
-        sb.append("SECURITY_PATCH: " + Build.VERSION.SECURITY_PATCH + "\n");
+//        sb.append("BASE_OS: " + Build.VERSION.BASE_OS + "\n");
+//        sb.append("SECURITY_PATCH: " + Build.VERSION.SECURITY_PATCH + "\n");
         sb.append("SDK: " + Build.VERSION.SDK + "\n");
         sb.append("SDK_INT: " + Build.VERSION.SDK_INT + "\n");
 //        sb.append("PREVIEW_SDK_INT: " + Build.VERSION.PREVIEW_SDK_INT + "\n");

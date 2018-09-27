@@ -1,139 +1,152 @@
 package com.example.administrator.hookandroid.Util;
 
-import android.telephony.TelephonyManager;
-import android.util.Log;
-
-import org.json.JSONObject;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class JavaReflectUtil {
 
+    /**
+     * Call Object Fields And Values Using Reflect
+     */
     public interface FieldFilter {
         boolean filterAction(Field field);
     }
 
-    public static String getClassNameWithoutPackageName(Class cls) {
-        String className = cls.getName();
-        String[] names = className.split("\\.");
-        String lastName = names[names.length - 1];
-        String resultName = lastName.replace("$", ".");
-        return resultName;
+    public static Map fieldNameValues(Object obj) {
+        return fieldNameValues(obj, null);
     }
 
-    public static JSONObject getObjectFieldNameValues(Object cls_or_obj) {
-        return getObjectFieldNameValues(cls_or_obj, null);
-    }
+    public static Map fieldNameValues(Object obj, FieldFilter filter) {
+        Map<String, Object> result = new HashMap<String, Object>();
 
-    public static JSONObject getObjectFieldNameValues(Object cls_or_obj, FieldFilter filter) {
-        JSONObject jsonObject = new JSONObject();
-        Boolean isClass = cls_or_obj instanceof Class;
-        try {
-            Object obj = null;
-            Class cls = null;
-            if (!isClass) {
-                obj = cls_or_obj;
-                cls = obj.getClass();
-            } else {
-                cls = (Class) cls_or_obj;
-            }
-
-            Field[] fds = cls.getDeclaredFields();
-            for (int i = 0; i < fds.length; i++) {
-                Field fd = fds[i];
-                fd.setAccessible(true);
-                if (filter != null && filter.filterAction(fd)) {
+        Boolean isClass = obj instanceof Class;
+        Class<?> clazz = isClass ? (Class<?>) obj : obj.getClass();
+        Field[] fields = clazz.getDeclaredFields();
+        for (int i = 0; i < fields.length; i++) {
+            try {
+                Field field = fields[i];
+                if (filter != null && filter.filterAction(field)) {
                     continue;
                 }
+                field.setAccessible(true);
 
-                String name = fd.getName();
-                Object value = null;
-                if (Modifier.isStatic(fd.getModifiers())) {
-                    value = fd.get(cls);
-                } else if (obj != null) {
-                    value = fd.get(obj);
-                }
+                String name = field.getName();
+                Object value = field.get(Modifier.isStatic(field.getModifiers()) ? clazz : obj);
                 if (value == null) {
-                    value = "";
+                    value = "<NULL>";
                 }
-                jsonObject.put(name, value);
+                result.put(name, value);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-        return jsonObject;
+        return result;
     }
 
-    public static JSONObject invokeGetMethodsWithObject(Object obj) {
-        JSONObject result = new JSONObject();
+    /**
+     * Call Object all "get" methods without parameters
+     */
+    public static Map invokeObjectGetMethods(Object obj) {
+        Map<String, Object> result = new HashMap<String, Object>();
 
-        Method[] methods = obj.getClass().getDeclaredMethods();
+        boolean isClass = obj instanceof Class;
+        Class<?> clazz = isClass ? (Class<?>) obj : obj.getClass();
+        Method[] methods = clazz.getDeclaredMethods();
         for (int i = 0; i < methods.length; i++) {
-            Method mt = methods[i];
-            mt.setAccessible(true);
-            String name = mt.getName();
-            if (name.startsWith("get")) {
+            Method method = methods[i];
+            method.setAccessible(true);
+            String methodName = method.getName();
+            if (methodName.startsWith("get")) {
                 try {
-
-                    Class returnType = mt.getReturnType();
-                    Class[] types = mt.getParameterTypes();
-
-                    if (types.length != 0) {
-                        continue;
+                    Class[] types = method.getParameterTypes();
+                    if (types.length == 0) {
+                        Object value = method.invoke(Modifier.isStatic(method.getModifiers()) ? clazz : obj, new Object[]{});
+                        result.put(methodName, value);
                     }
-
-                    Object value = "NULL";
-
-                    if (Modifier.isStatic(mt.getModifiers())) {
-                        value = mt.invoke(obj.getClass(), new Object[]{});
-                    } else {
-                        value = mt.invoke(obj, new Object[]{});
-                    }
-
-                    result.put(name, value);
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
-
         return result;
     }
 
-    public static Object invokeMethodWithObject(Object obj, String methodName) {
-        try {
-            boolean isClass = obj instanceof Class;
-            Method[] methods = isClass ? ((Class) obj).getDeclaredMethods() : obj.getClass().getDeclaredMethods();
-            for (int i = 0; i < methods.length; i++) {
-                Method mt = methods[i];
-                mt.setAccessible(true);
-                String name = mt.getName();
+    /**
+     * About Field Signature
+     */
+    public static String getFieldSignature(Class clz, String fieldName) {
+        String result = "";
+        Field[] fields = clz.getDeclaredFields();
+        for (int i = 0; i < fields.length; i++) {
+            try {
+                Field field = fields[i];
+                String name = field.getName();
+                if (name.equals(fieldName)) {
+                    Method sigMethod = field.getClass().getDeclaredMethod("getSignatureAttribute", new Class[]{});
+                    sigMethod.setAccessible(true);
+                    String signatureStr = (String) sigMethod.invoke(field, new Object[]{});
+                    result = signatureStr;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * About Method Signature
+     */
+    public static String getMethodSignature(Class clz, String methodName) {
+        String result = "";
+        Method[] methods = clz.getDeclaredMethods();
+        for (int i = 0; i < methods.length; i++) {
+            try {
+                Method method = methods[i];
+                String name = method.getName();
                 if (name.equals(methodName)) {
-                    return mt.invoke(obj, new Object[]{});
+                    Method getSigMethod = method.getClass().getDeclaredMethod("getSignatureAttribute", new Class[]{});
+                    getSigMethod.setAccessible(true);
+                    String signatureStr = (String) getSigMethod.invoke(method, new Object[]{});
+                    result = signatureStr;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * About Method Parameters Types
+     */
+    public static List<Class[]> getMethodParameterTypes(String className, String methodName) {
+        List<Class[]> result = new ArrayList<Class[]>();
+        try {
+            Class<?> clz = Class.forName(className);
+            Method[] methods = clz.getDeclaredMethods();
+            for (int i = 0; i < methods.length; i++) {
+                Method method = methods[i];
+                String name = method.getName();
+                if (name.equals(methodName)) {
+                    Class[] types = method.getParameterTypes();
+                    result.add(types);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return result;
     }
 
-    public static Object callMethodWithObject(Object obj, String methodName, Class<?>[] parameterTypes, Object... args) {
-        try {
-            boolean isClass = obj instanceof Class;
-            Method mt = isClass ? ((Class) obj).getDeclaredMethod(methodName, parameterTypes) : obj.getClass().getDeclaredMethod(methodName, parameterTypes);
-            mt.setAccessible(true);
-            return mt.invoke(obj, args);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
+    /**
+     * Call Object Method Using Reflect
+     */
     public static Object invokeClassMethod(String className, String methodName, Class<?>[] argsTypes, Object[] args) {
         ClassLoader classLoader = String.class.getClassLoader();
         return invokeClassMethod(className, classLoader, methodName, argsTypes, args);
