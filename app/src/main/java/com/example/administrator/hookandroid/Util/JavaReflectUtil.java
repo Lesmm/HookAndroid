@@ -13,6 +13,10 @@ public class JavaReflectUtil {
     /**
      * Call Object Fields And Values Using Reflect
      */
+    public static Object objectFieldValue(Object obj, String fieldName) {
+        return objectFieldNameValues(obj).get(fieldName);
+    }
+
     public interface FieldFilter {
         boolean filterAction(Field field);
     }

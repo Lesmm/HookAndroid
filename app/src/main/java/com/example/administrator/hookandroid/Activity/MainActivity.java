@@ -63,6 +63,8 @@ public class MainActivity extends Activity {
         final TextView mTextView = (TextView) findViewById(R.id.textView1);
         mTextView.setMovementMethod(ScrollingMovementMethod.getInstance());
 
+        int a = JavaReflectUtil.objectFieldValue(R.id, "textView1");
+
         DeviceInfoUtil.getBGHandler().post(new Runnable() {
             @Override
             public void run() {
