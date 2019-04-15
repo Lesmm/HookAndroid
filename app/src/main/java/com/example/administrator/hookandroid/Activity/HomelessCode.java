@@ -5,9 +5,9 @@ import android.os.Binder;
 import android.os.Handler;
 import android.util.Log;
 
-import com.example.administrator.hookandroid.Util.JavaReflectUtil;
+import common.modules.util.IReflectUtil;
+import com.example.administrator.hookandroid.Network.HTTPSender;
 import com.example.administrator.hookandroid.Util.PackageUtil;
-import com.example.administrator.hookandroid.network.HTTPSender;
 
 import org.json.JSONObject;
 
@@ -91,7 +91,7 @@ public class HomelessCode {
                             int[].class, int.class, int.class, int.class, String.class, boolean.class, String[].class};
                     Object[] paramValues = new Object[]{"com.example.administrator.hookandroid.Activity.HomelessCode", "New_Main_Porccess", uid, uid,
                             gids, 0, 2, 0, null, false, new String[]{"", ""}};
-                    JavaReflectUtil.invokeMethod(android.os.Process.class, "start", paramTypes, paramValues);
+                    IReflectUtil.invokeMethod(android.os.Process.class, "start", paramTypes, paramValues);
 
                     Log.d(TAG, "");
                 } catch (Exception e) {
@@ -99,5 +99,22 @@ public class HomelessCode {
                 }
             }
         }, 3 * 1000);
+
+
+
+        // new a ScanResult for test
+        /*
+        try {
+            Class wifiSsidClz = Class.forName("android.net.wifi.WifiSsid");
+            Constructor constructor = ScanResult.class.getConstructor(new Class[]{wifiSsidClz, String.class, String.class, int.class, int.class, long.class});
+            Method createWifiSsidMd = wifiSsidClz.getDeclaredMethod("createFromAsciiEncoded", new Class[]{String.class});
+            Object wifiSsid = createWifiSsidMd.invoke(wifiSsidClz, "abcd-wifi");
+            ScanResult scResult = (ScanResult) constructor.newInstance(new Object[]{wifiSsid, "88:88:88:88:88:88", "caps", 1, 2, 3});
+            Log.d(TAG, scResult.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        */
+
     }
 }

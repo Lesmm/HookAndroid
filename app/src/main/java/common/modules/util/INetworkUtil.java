@@ -1,12 +1,12 @@
-package com.example.administrator.hookandroid.Util;
-
-import android.content.Context;
+package common.modules.util;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class NetworkUtil {
+import android.content.Context;
+
+public class INetworkUtil {
 
     // copy from android.net.NetworkUtils.java
     // also, you can use java Reflect to implement
@@ -42,7 +42,7 @@ public class NetworkUtil {
 
 
     public static String intToHostAddress(int hostAddress) {
-        InetAddress address = NetworkUtil.intToInetAddress(hostAddress);
+        InetAddress address = INetworkUtil.intToInetAddress(hostAddress);
         if (address != null) {
             return address.getHostAddress();
         }
@@ -66,19 +66,26 @@ public class NetworkUtil {
 
     // 755214528 -> 192.168.3.45; 17017024 -> 192.168.3.1
     public static void grepIpToInt(Context context) {
-        String filename = context.getFilesDir().getAbsolutePath() + "/IpToInt.txt";
-        for (int i = 1; i < 256; i++) {
-            for (int j = 1; j < 256; j++) {
-                if (i == 1 && j == 1) {
-                    continue;
-                }
+        String filename = context.getFilesDir().getAbsolutePath() + "/IpToInt.json";
+        IFileUtil.appendTextToFile("{", filename);
+        for (int i = 1; i <= 255; i++) {
+            for (int j = 1; j <= 255; j++) {
+//                if (i == 1 && j == 1) {
+//                    continue;
+//                }
                 String ipString = "192.168." + i +"." + j;
-                int intAddress = NetworkUtil.hostAddressToInt(ipString);
-                String log = ipString + "=" + intAddress ;
+                int intAddress = INetworkUtil.hostAddressToInt(ipString);
+                String log = "\"" + ipString + "\"" + ":" + intAddress ;
+
+                if (!(i == 255 && j == 255)) {
+                    log = log + ",";
+                }
+
                 log = log + "\r\n";
-                FileUtil.appendTextToFile(log, filename);
+                IFileUtil.appendTextToFile(log, filename);
             }
         }
+        IFileUtil.appendTextToFile("}", filename);
     }
 
 

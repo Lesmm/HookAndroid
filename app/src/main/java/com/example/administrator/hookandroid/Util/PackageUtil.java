@@ -5,7 +5,6 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.UserHandle;
-import android.util.Log;
 
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;

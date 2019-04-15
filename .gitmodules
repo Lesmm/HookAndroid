@@ -1,0 +1,6 @@
+[submodule "app/src/main/java/modules-android"]
+	path = app/src/main/java/modules-android
+	url = https://github.com/Lesmm/modules-android.git
+[submodule "app/src/main/modules-android"]
+	path = app/src/main/modules-android
+	url = https://github.com/Lesmm/modules-android.git

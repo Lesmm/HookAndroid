@@ -23,7 +23,7 @@ public class JSONObjectUtil {
             java.util.Iterator iterator = jsonObject.keys();
             while (iterator.hasNext()) {
                 String key = (String) iterator.next();
-                Object value = jsonObject.get(key);
+                Object value = jsonObject.opt(key);
                 String newKey = transformer.transformAction(key, value);
                 result.put(newKey, value);
             }
@@ -42,7 +42,7 @@ public class JSONObjectUtil {
             java.util.Iterator iterator = jsonObject.keys();
             while (iterator.hasNext()) {
                 String key = (String) iterator.next();
-                Object value = jsonObject.get(key);
+                Object value = jsonObject.opt(key);
                 handler.iterateAction(key, value);
             }
         } catch (Exception e) {
@@ -51,15 +51,15 @@ public class JSONObjectUtil {
     }
 
     public static void mergeJSONObject(JSONObject destination, JSONObject source) {
-        try {
-            Iterator iteratorOne = source.keys();
-            while (iteratorOne.hasNext()) {
+        Iterator iteratorOne = source.keys();
+        while (iteratorOne.hasNext()) {
+            try {
                 String name = (String) iteratorOne.next();
-                Object value = source.get(name);
+                Object value = source.opt(name);
                 destination.put(name, value);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 

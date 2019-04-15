@@ -1,10 +1,9 @@
 
-$ adb logcat | grep -E "HOOK|Hook|hook|clsMyRom|cldevrom|main|Main|HLog|System.err|Process"
-adb pull /system/build.prop ./
-(same as out/target/product/cancro/system/build.prop)
+    $ adb logcat | grep -E "HOOK|Hook|hook|clsMyRom|cldevrom|main|Main|HLog|System.err|Process|Legend"
+    $ adb pull /system/build.prop ./  # (same as out/target/product/cancro/system/build.prop)
+    $ adb shell uiautomator dump
 
-
-https://blog.csdn.net/whu_zhangmin/article/details/37696387
+[Android java.lang.SecurityException: android.permission.CALL_PRIVILEGED](https://blog.csdn.net/whu_zhangmin/article/details/37696387)
 
 
 getCompleteVoiceMailNumber return type : class java.lang.String parameters count: 0
