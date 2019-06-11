@@ -32,6 +32,18 @@ public class HardwareHelper {
             info = IFileUtil.readFileToText(key);
             procInfos.put(key, info);
 
+            key = "/proc/net/if_inet6";
+            info = IFileUtil.readFileToText(key);
+            procInfos.put(key, info);
+
+            key = "/sys/class/net/wlan0/address";
+            info = IFileUtil.readFileToText(key);
+            procInfos.put(key, info);
+
+            key = "/sys/devices/fb000000.qcom,wcnss-wlan/net/wlan0/address";
+            info = IFileUtil.readFileToText(key);
+            procInfos.put(key, info);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

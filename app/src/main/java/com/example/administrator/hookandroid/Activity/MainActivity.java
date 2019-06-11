@@ -29,17 +29,19 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.administrator.hookandroid.Info.DeviceInfo;
-import com.example.administrator.hookandroid.Network.HTTPSender;
 import com.example.administrator.hookandroid.R;
 import com.example.administrator.hookandroid.Test.TestCases;
 import com.example.administrator.hookandroid.Util.APPSettings;
 import com.example.administrator.hookandroid.Util.CommonUtils;
+import com.example.administrator.hookandroid.Util.JSONObjectUtil;
+import com.example.administrator.hookandroid.Util.JSONStringUtil;
 import com.example.administrator.hookandroid.Util.SystemPropertiesUtil;
 import com.example.administrator.hookandroid.Util.UmengUtil;
 import com.umeng.analytics.MobclickAgent;
@@ -47,7 +49,6 @@ import com.umeng.analytics.MobclickAgent;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -85,6 +86,25 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (Build.VERSION.SDK_INT >= 23) {
+            android.support.v4.app.ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_WIFI_STATE,
+                    Manifest.permission.CHANGE_WIFI_STATE,
+                    Manifest.permission.READ_PHONE_STATE,
+                    Manifest.permission.INTERNET,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_SETTINGS,
+            }, 1);
+        }
+
+        try {
+            Runtime.getRuntime().exec("su");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        String userAgent = new WebView(this).getSettings().getUserAgentString();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             String permissions[] = {Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
@@ -147,7 +167,11 @@ public class MainActivity extends Activity {
         }
         try {
 
-            TestCases.doTest(this);
+//            String contents = getPhoneInfo(this);
+//            Log.d("Hook", "getPhoneInfo: " + contents);
+
+            TestCases.testSdcard(this);
+            TestCases.testSettings(this);
 
             // share preference
             SharedPreferences sharedPreferences = getSharedPreferences(this.getPackageName(), Context.MODE_PRIVATE);
@@ -155,6 +179,11 @@ public class MainActivity extends Activity {
             editor.putString("username", "Tom");
             editor.putInt("password", 123456);
             editor.commit();
+            String value = sharedPreferences.getString("username", "");
+            Log.d("Hook", "SharedPreferences value: " + value);
+
+            File mBackupFile = (File)IReflectUtil.objectFieldValue(sharedPreferences, "mBackupFile");
+            File mFile = (File)IReflectUtil.objectFieldValue(sharedPreferences, "mFile");
 
             // infos
             final TextView mTextView = (TextView) findViewById(R.id.textView_info);
@@ -267,17 +296,20 @@ public class MainActivity extends Activity {
                                         }
                                     });
 
-                                    final JSONObject res = HTTPSender.post(postURL, resultJson);
+                                    IFileUtil.writeTextToFile(JSONStringUtil.jsonFormart(resultJson), "/sdcard/phoneInfo.json");
+
+//                                    final JSONObject res = HTTPSender.post(postURL, resultJson);
 
                                     DeviceInfo.getMainHandler().post(new Runnable() {
                                         @Override
                                         public void run() {
                                             uploadButton.setText("版本3 | 上传设备信息");
-                                            if (res != null) {
-                                                Toast.makeText(MainActivity.this, "上传/更新设备信息完成: " + res.toString(), Toast.LENGTH_LONG).show();
-                                            } else {
-                                                Toast.makeText(MainActivity.this, "上传/更新设备信息失败(无信息)", Toast.LENGTH_LONG).show();
-                                            }
+                                            Toast.makeText(MainActivity.this, "收集完成!", Toast.LENGTH_LONG).show();
+//                                            if (res != null) {
+//                                                Toast.makeText(MainActivity.this, "上传/更新设备信息完成: " + res.toString(), Toast.LENGTH_LONG).show();
+//                                            } else {
+//                                                Toast.makeText(MainActivity.this, "上传/更新设备信息失败(无信息)", Toast.LENGTH_LONG).show();
+//                                            }
                                         }
                                     });
 
@@ -541,4 +573,32 @@ public class MainActivity extends Activity {
         return sb.toString();
     }
 
-}
+
+    public static String  getPhoneInfo(Context cxt) {
+        try {
+            TelephonyManager tm = (TelephonyManager) cxt.getSystemService(Context.TELEPHONY_SERVICE);
+            StringBuilder sb = new StringBuilder();
+
+            sb.append("\nDeviceId(IMEI) = " + tm.getDeviceId());
+            sb.append("\nDeviceSoftwareVersion = " + tm.getDeviceSoftwareVersion());
+            sb.append("\nLine1Number = " + tm.getLine1Number());
+            sb.append("\nNetworkCountryIso = " + tm.getNetworkCountryIso());
+            sb.append("\nNetworkOperator = " + tm.getNetworkOperator());
+            sb.append("\nNetworkOperatorName = " + tm.getNetworkOperatorName());
+            sb.append("\nNetworkType = " + tm.getNetworkType());
+            sb.append("\nPhoneType = " + tm.getPhoneType());
+            sb.append("\nSimCountryIso = " + tm.getSimCountryIso());
+            sb.append("\nSimOperator = " + tm.getSimOperator());
+            sb.append("\nSimOperatorName = " + tm.getSimOperatorName());
+            sb.append("\nSimSerialNumber = " + tm.getSimSerialNumber());
+            sb.append("\nSimState = " + tm.getSimState());
+            sb.append("\nSubscriberId(IMSI) = " + tm.getSubscriberId());
+            sb.append("\nVoiceMailNumber = " + tm.getVoiceMailNumber());
+            return sb.toString();
+        } catch (SecurityException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    }

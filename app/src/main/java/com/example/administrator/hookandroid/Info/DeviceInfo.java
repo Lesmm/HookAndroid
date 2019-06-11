@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
@@ -41,6 +42,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -57,6 +59,7 @@ import java.util.regex.Pattern;
 
 import common.modules.util.HLog;
 import common.modules.util.IFileUtil;
+import common.modules.util.IProcessUtil;
 import common.modules.util.IReflectUtil;
 
 public class DeviceInfo {
@@ -292,82 +295,6 @@ public class DeviceInfo {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
-        // 5. battery info _______________________________________
-        final JSONObject batteryResult = new JSONObject();
-
-        HLog.log("正在获取电池信息...");
-        context.registerReceiver(new BroadcastReceiver() {
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                // i.e. {technology=Li-poly, icon-small=17302984, health=2, status=5, plugged=2, present=true, level=100, scale=100, temperature=338, voltage=4277, invalid_charger=0}
-                //1. unparcel() first, then get mMap field value. but after unparcel(), mParcelledData will set to null.
-                Bundle bundle = intent.getExtras();
-                IReflectUtil.invokeMethod(bundle, "unparcel", new Class[]{}, new Object[]{});
-                Map<String, Object> mMap = (Map<String, Object>) IReflectUtil.objectFieldValue(bundle, "mMap");
-                JSONObject bundleInfos = new JSONObject(mMap);
-
-                if (action.equals(Intent.ACTION_BATTERY_CHANGED)) {
-                    int level = intent.getIntExtra("level", 0);  //电池剩余电量
-                    int scale = intent.getIntExtra("scale", 0); //获取电池满电量数值
-                    String technology = intent.getStringExtra("technology");  //获取电池技术支持
-                    int status = intent.getIntExtra("status",BatteryManager.BATTERY_STATUS_UNKNOWN);  //获取电池状态
-                    int plugged = intent.getIntExtra("plugged", 0);  //获取电源信息
-                    int health = intent.getIntExtra("health",BatteryManager.BATTERY_HEALTH_UNKNOWN); //获取电池健康度
-                    int voltage = intent.getIntExtra("voltage", 0);  //获取电池电压
-                    int temperature = intent.getIntExtra("temperature", 0); //获取电池温度
-
-                    try {
-                        batteryResult.put("Battery.ACTION_BATTERY_CHANGED", bundleInfos);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-
-                    HLog.log("获取电池信息成功...");
-                    DeviceInfo.iNotify();
-                }
-            }
-        }, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        // 以免获取电池信息一直没有回调
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                HLog.log("获取电池信息超时...");
-                DeviceInfo.iNotify();
-            }
-        }, 30000);
-        DeviceInfo.iWait();
-
-        // Now NO Need to handle ACTION_BATTERY_LOW, ACTION_BATTERY_OKAY, ACTION_POWER_CONNECTED, ACTION_POWER_DISCONNECTED
-        // Here just for observe
-        IntentFilter intentFilter = new IntentFilter();
-//        intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
-        intentFilter.addAction(Intent.ACTION_BATTERY_LOW);
-        intentFilter.addAction(Intent.ACTION_BATTERY_OKAY);
-        intentFilter.addAction(Intent.ACTION_POWER_CONNECTED);
-        intentFilter.addAction(Intent.ACTION_POWER_DISCONNECTED);
-        context.registerReceiver(new BroadcastReceiver() {
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                String tips  = "[NULL]";
-
-                Bundle bundle = intent.getExtras();
-                if (bundle != null) {
-                    IReflectUtil.invokeMethod(bundle, "unparcel", new Class[]{}, new Object[]{});
-                    Map<String, Object> mMap = (Map<String, Object>) IReflectUtil.objectFieldValue(bundle, "mMap");
-                    JSONObject bundleInfos = new JSONObject(mMap);
-                    tips = bundleInfos.toString();
-                }
-
-                Toast.makeText(context, "action: " + action + ", info: " + tips, Toast.LENGTH_LONG).show();
-            }
-        }, intentFilter);
-
-
-
-
-
 
 
         // 6. telephony properties _______________________________________
@@ -664,6 +591,79 @@ public class DeviceInfo {
 
 
 
+        // 5. battery info _______________________________________
+        final JSONObject batteryResult = new JSONObject();
+
+        HLog.log("正在获取电池信息...");
+        context.registerReceiver(new BroadcastReceiver() {
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                // i.e. {technology=Li-poly, icon-small=17302984, health=2, status=5, plugged=2, present=true, level=100, scale=100, temperature=338, voltage=4277, invalid_charger=0}
+                //1. unparcel() first, then get mMap field value. but after unparcel(), mParcelledData will set to null.
+                Bundle bundle = intent.getExtras();
+                IReflectUtil.invokeMethod(bundle, "unparcel", new Class[]{}, new Object[]{});
+                Map<String, Object> mMap = (Map<String, Object>) IReflectUtil.objectFieldValue(bundle, "mMap");
+                JSONObject bundleInfos = new JSONObject(mMap);
+
+                if (action.equals(Intent.ACTION_BATTERY_CHANGED)) {
+                    int level = intent.getIntExtra("level", 0);  //电池剩余电量
+                    int scale = intent.getIntExtra("scale", 0); //获取电池满电量数值
+                    String technology = intent.getStringExtra("technology");  //获取电池技术支持
+                    int status = intent.getIntExtra("status",BatteryManager.BATTERY_STATUS_UNKNOWN);  //获取电池状态
+                    int plugged = intent.getIntExtra("plugged", 0);  //获取电源信息
+                    int health = intent.getIntExtra("health",BatteryManager.BATTERY_HEALTH_UNKNOWN); //获取电池健康度
+                    int voltage = intent.getIntExtra("voltage", 0);  //获取电池电压
+                    int temperature = intent.getIntExtra("temperature", 0); //获取电池温度
+
+                    try {
+                        batteryResult.put("Battery.ACTION_BATTERY_CHANGED", bundleInfos);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    HLog.log("获取电池信息成功...");
+                    DeviceInfo.iNotify();
+                }
+            }
+        }, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        // 以免获取电池信息一直没有回调
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                HLog.log("获取电池信息超时...");
+                DeviceInfo.iNotify();
+            }
+        }, 30000);
+        DeviceInfo.iWait();
+
+        // Now NO Need to handle ACTION_BATTERY_LOW, ACTION_BATTERY_OKAY, ACTION_POWER_CONNECTED, ACTION_POWER_DISCONNECTED
+        // Here just for observe
+        IntentFilter intentFilter = new IntentFilter();
+//        intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        intentFilter.addAction(Intent.ACTION_BATTERY_LOW);
+        intentFilter.addAction(Intent.ACTION_BATTERY_OKAY);
+        intentFilter.addAction(Intent.ACTION_POWER_CONNECTED);
+        intentFilter.addAction(Intent.ACTION_POWER_DISCONNECTED);
+        context.registerReceiver(new BroadcastReceiver() {
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                String tips  = "[NULL]";
+
+                Bundle bundle = intent.getExtras();
+                if (bundle != null) {
+                    IReflectUtil.invokeMethod(bundle, "unparcel", new Class[]{}, new Object[]{});
+                    Map<String, Object> mMap = (Map<String, Object>) IReflectUtil.objectFieldValue(bundle, "mMap");
+                    JSONObject bundleInfos = new JSONObject(mMap);
+                    tips = bundleInfos.toString();
+                }
+
+                Toast.makeText(context, "action: " + action + ", info: " + tips, Toast.LENGTH_LONG).show();
+            }
+        }, intentFilter);
+
+
+        int numberOfCameras = Camera.getNumberOfCameras();
+
         // merges
         JSONObjectUtil.mergeJSONObject(result, buildResult);
         JSONObjectUtil.mergeJSONObject(result, telephonyResult);
@@ -742,9 +742,11 @@ public class DeviceInfo {
         return settingsResultJson;
     }
 
+
     public static JSONObject getSystemBuildProperties() {
         JSONObject buildProperties = new JSONObject();
         try {
+
             Properties properties = new Properties();
             BufferedReader brd = new BufferedReader(new FileReader("/system/build.prop"));
 //            InputStreamReader isr = new InputStreamReader(context.getAssets().open("build.prop"),"UTF-8");
@@ -756,12 +758,32 @@ public class DeviceInfo {
                 Object propertyVal = properties.get(key);
                 buildProperties.put(key, propertyVal);
             }
+
+            Properties properties2 = new Properties();
+            properties2.load(new BufferedReader(new FileReader("/default.prop")));
+            Enumeration enu2 = properties2.propertyNames();
+            while (enu2.hasMoreElements()) {
+                String key = (String) enu2.nextElement();
+                Object propertyVal = properties2.get(key);
+                buildProperties.put(key, propertyVal);
+            }
+
+            // no need to load /init.rc
+
+            // /system/bin/getprop
+//            String allKeyValues = IProcessUtil.execCommandsWithSu("getprop");
+//            BufferedReader bufferedReader = new BufferedReader(new StringReader(allKeyValues));
+//            String line = null;
+//            while ( (line = bufferedReader.readLine()) != null ) {
+//                String[] keyValue = line.split(":");
+//
+//            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
         return buildProperties;
     }
-
 
     public static JSONObject getTelephonySystemProperties() {
         JSONObject result = new JSONObject();
