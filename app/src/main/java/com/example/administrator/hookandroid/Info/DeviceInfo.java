@@ -177,9 +177,11 @@ public class DeviceInfo {
         Object iTelephony = IReflectUtil.invokeMethod(telephonyManager, "getITelephony", new Class[]{}, new Object[] {});
         Map<?, ?> resultInfo = IReflectUtil.invokeObjectAllNonVoidZeroArgsMethods(iPhoneSubInfo);
         Map<?, ?> resultTelephony = IReflectUtil.invokeObjectAllNonVoidZeroArgsMethods(iTelephony);
+        Map<?, ?> resultTelephonyManager = IReflectUtil.invokeObjectAllNonVoidZeroArgsMethods(telephonyManager);
 
         JSONObjectUtil.mergeJSONObject(telephonyResult, new JSONObjectEx(resultInfo));
         JSONObjectUtil.mergeJSONObject(telephonyResult, new JSONObjectEx(resultTelephony));
+        JSONObjectUtil.mergeJSONObject(telephonyResult, new JSONObjectEx(resultTelephonyManager));
 
         telephonyResult = JSONObjectUtil.transformJSONObjectKeys(telephonyResult, new JSONObjectUtil.KeyTransformer() {
             @Override

@@ -156,6 +156,18 @@ public class IReflectUtil {
                 Class<?>[] types = method.getParameterTypes();
                 Class<?> returnType = method.getReturnType();
                 if (returnType != void.class && types.length == 0) {
+
+                    // public boolean endCall() throws android.os.RemoteException;
+                    // public boolean endCallForSubscriber(int subId) throws android.os.RemoteException;
+                    if (methodName.startsWith("endCall")) {
+                        continue;
+                    }
+                    // public byte[] getAtr() throws android.os.RemoteException;
+                    // public byte[] getAtrUsingSubId(int subId) throws android.os.RemoteException;
+                    if (methodName.startsWith("getAtr")) {
+                        continue;
+                    }
+
                     Object value = method.invoke(Modifier.isStatic(method.getModifiers()) ? clazz : obj, new Object[]{});
                     result.put(methodName, value);
                 }
